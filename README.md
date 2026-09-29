@@ -2,8 +2,10 @@ This program orginated from the github repository shkrnm/PrismSLINTStream.
 
 REQUIREMENTS:
     -Python installed on host machine (device running this program)
-    -See requirements.txt for python package requirements
     -Host machine turned on and running
+
+SETUP:
+    -
 
 AWESOME PROGRAM:
 This program is amazing for file streaming (sharing files between device on your local network), and it works without internet while avoiding interference with other servers around the world.
