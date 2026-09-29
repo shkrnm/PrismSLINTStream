@@ -1,0 +1,1682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>prismDOS S()\TURN Desktop</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&family=Tiny5&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --accent: #b34bff;
+      --accent-soft: rgba(179, 75, 255, 0.35);
+      --bg-deep: radial-gradient(circle at top, #1a0830 0, #05000f 55%, #000000 100%);
+      --glass-tint: rgba(10, 5, 30, 0.72);
+      --glass-border: rgba(255, 255, 255, 0.12);
+      --glass-highlight: rgba(255, 255, 255, 0.18);
+      --text-main: #f5e9ff;
+      --text-soft: #c3a9ff;
+      --danger: #ff4b7a;
+      --shadow-strong: 0 22px 60px rgba(0, 0, 0, 0.75);
+      --radius-swuircle-lg-tl: 28px;
+      --radius-swuircle-lg-tr: 22px;
+      --radius-swuircle-lg-bl: 22px;
+      --radius-swuircle-lg-br: 30px;
+      --radius-swuircle-sm: 16px;
+      --taskbar-height: 42px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      margin: 0;
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+      font-family: 'Lexend', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      color: var(--text-main);
+      background: #05000f;
+    }
+
+    #desktop {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      background: var(--bg-deep);
+      overflow: hidden;
+    }
+
+    #wallpaper {
+      position: absolute;
+      inset: 0;
+      background-image: radial-gradient(circle at 10% 0%, rgba(179, 75, 255, 0.35) 0, transparent 40%),
+                        radial-gradient(circle at 90% 100%, rgba(0, 255, 200, 0.18) 0, transparent 45%),
+                        radial-gradient(circle at 50% 50%, rgba(40, 10, 90, 0.9) 0, #02000a 70%);
+      filter: saturate(1.2) contrast(1.05);
+      pointer-events: none;
+    }
+
+    #desktop-noise {
+      position: absolute;
+      inset: -40px;
+      background-image: url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwMCIgaGVpZ2h0PSI3MDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGZpbHRlciBpZD0ibm9pc2UiPjxmZVR1cmJ1bGVuY2UgdHlwZT0icmFkaWFsIiByPSIxIiBjeD0iMCIgY3k9IjAiPj9mZVR1cmJ1bGVuY2U8L2ZlVHVyYnVsZW5jZT48ZmVDb2xvck1hdHJpeCB0eXBlPSJtYXRyaXgiIHZhbHVlcz0iMCAwIDAgMCAwIDAgMCAwIDAgMCAwIDAgMCAwIDAgMCAxIi8+PGZlQmxlbmQgbW9kZT0ibm9ybWFsIi8+PC9maWx0ZXI+PHJlY3Qgd2lkdGg9IjEyMDAiIGhlaWdodD0iNzAwIiBmaWx0ZXI9InVybCgjbm9pc2UpIiBvcGFjaXR5PSIwLjA4Ii8+PC9zdmc+");
+      mix-blend-mode: soft-light;
+      opacity: 0.6;
+      pointer-events: none;
+    }
+
+    #icon-row {
+      position: absolute;
+      top: 18px;
+      left: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      z-index: 2;
+    }
+
+    .icon {
+      width: 64px;
+      height: 64px;
+      border-radius: 22px;
+      background: radial-gradient(circle at 20% 0%, rgba(255,255,255,0.35) 0, transparent 45%),
+                  radial-gradient(circle at 80% 100%, rgba(0,0,0,0.55) 0, transparent 55%),
+                  rgba(10, 5, 30, 0.85);
+      box-shadow: 0 10px 26px rgba(0,0,0,0.65);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: default;
+      position: relative;
+      border: 1px solid rgba(255,255,255,0.12);
+      backdrop-filter: blur(14px) saturate(1.3);
+      transition: transform 0.12s ease-out, box-shadow 0.12s ease-out, border-color 0.12s ease-out;
+    }
+
+    .icon::before {
+      content: '';
+      position: absolute;
+      inset: 1px;
+      border-radius: inherit;
+      background: radial-gradient(circle at 20% 0%, rgba(255,255,255,0.22) 0, transparent 40%);
+      opacity: 0.7;
+      pointer-events: none;
+    }
+
+    .icon:hover {
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 0 16px 32px rgba(0,0,0,0.8);
+      border-color: rgba(255,255,255,0.22);
+    }
+
+    .icon:active {
+      transform: translateY(1px) scale(0.98);
+      box-shadow: 0 6px 18px rgba(0,0,0,0.7);
+    }
+
+    .icon-glyph {
+      width: 32px;
+      height: 32px;
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+      filter: drop-shadow(0 0 6px rgba(0,0,0,0.8));
+    }
+
+    .icon-label {
+      margin-top: 4px;
+      font-size: 11px;
+      text-align: center;
+      color: var(--text-soft);
+      text-shadow: 0 1px 2px rgba(0,0,0,0.9);
+      max-width: 80px;
+    }
+
+    .icon-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      cursor: default;
+      user-select: none;
+    }
+
+    #window-layer {
+      position: absolute;
+      inset: 0;
+      padding: 18px 18px calc(var(--taskbar-height) + 18px);
+      pointer-events: none;
+    }
+
+    .window {
+      position: absolute;
+      min-width: 420px;
+      min-height: 260px;
+      max-width: calc(100% - 80px);
+      max-height: calc(100% - 120px);
+      background: var(--glass-tint);
+      border-radius: var(--radius-swuircle-lg-tl) var(--radius-swuircle-lg-tr)
+                     var(--radius-swuircle-lg-bl) var(--radius-swuircle-lg-br);
+      border: 1px solid var(--glass-border);
+      box-shadow: var(--shadow-strong);
+      backdrop-filter: blur(22px) saturate(1.35);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      pointer-events: auto;
+      resize: both;
+    }
+
+    .window.hidden {
+      display: none;
+    }
+
+    .window-header {
+      height: 34px;
+      display: flex;
+      align-items: center;
+      padding: 0 10px;
+      gap: 8px;
+      background: linear-gradient(90deg,
+        rgba(255,255,255,0.08),
+        rgba(255,255,255,0.02),
+        rgba(0,0,0,0.35));
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+      cursor: move;
+      user-select: none;
+    }
+
+    .window-dots {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.18);
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.6);
+      cursor: default;
+    }
+
+    .dot.close {
+      background: radial-gradient(circle at 30% 30%, #ffb3c7 0, #ff4b7a 55%, #5a0018 100%);
+    }
+
+    .dot.min {
+      background: radial-gradient(circle at 30% 30%, #ffe9b3 0, #ffb84b 55%, #5a3a00 100%);
+    }
+
+    .dot.max {
+      background: radial-gradient(circle at 30% 30%, #c3ffb3 0, #5bff4b 55%, #004d1a 100%);
+    }
+
+    .window-title {
+      font-size: 12px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-soft);
+      text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+    }
+
+    .window-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 10px;
+      gap: 8px;
+      position: relative;
+    }
+
+    .window-resize-handle {
+      position: absolute;
+      right: 6px;
+      bottom: 6px;
+      width: 14px;
+      height: 14px;
+      border-radius: 4px;
+      border: 1px solid rgba(255,255,255,0.35);
+      background: linear-gradient(135deg,
+        rgba(255,255,255,0.4),
+        rgba(255,255,255,0.05));
+      opacity: 0.7;
+      pointer-events: none;
+    }
+
+    #terminal-window {
+      width: 640px;
+      height: 380px;
+      left: 80px;
+      top: 80px;
+    }
+
+    #terminal-output {
+      flex: 1;
+      background: radial-gradient(circle at 0 0, rgba(255,255,255,0.06) 0, transparent 40%),
+                  rgba(3, 0, 20, 0.96);
+      border-radius: 14px;
+      border: 1px solid rgba(0,0,0,0.8);
+      padding: 8px 10px;
+      font-family: 'Tiny5', monospace;
+      font-size: 14px;
+      color: #7ef9ff;
+      overflow-y: auto;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04);
+    }
+
+    #terminal-input-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    #terminal-prompt {
+      font-family: 'Tiny5', monospace;
+      font-size: 14px;
+      color: var(--accent);
+    }
+
+    #command {
+      flex: 1;
+      background: rgba(10, 0, 40, 0.95);
+      color: #7ef9ff;
+      border-radius: 999px;
+      border: 1px solid rgba(0,0,0,0.9);
+      padding: 6px 10px;
+      font-family: 'Tiny5', monospace;
+      font-size: 14px;
+      outline: none;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06);
+    }
+
+    #command::placeholder {
+      color: rgba(126, 249, 255, 0.4);
+    }
+
+    #atom-editor-window {
+      width: 620px;
+      height: 360px;
+      left: 140px;
+      top: 120px;
+    }
+
+    #atomtext {
+      width: 100%;
+      height: calc(100% - 26px);
+      background: #020008;
+      color: #ffb347;
+      border-radius: 14px;
+      border: 1px solid rgba(0,0,0,0.9);
+      font-family: 'Press Start 2P', monospace;
+      font-size: 11px;
+      padding: 8px;
+      resize: none;
+      outline: none;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06);
+    }
+
+    #atomlabel {
+      font-size: 10px;
+      color: var(--text-soft);
+      margin-top: 4px;
+      font-family: 'Press Start 2P', monospace;
+    }
+
+    #atomgame-window {
+      width: 520px;
+      height: 340px;
+      right: 80px;
+      top: 90px;
+    }
+
+    #atomscreen {
+      flex: 1;
+      background: #000000;
+      color: #ffb347;
+      border-radius: 14px;
+      border: 1px solid rgba(0,0,0,0.9);
+      font-family: 'Press Start 2P', monospace;
+      font-size: 12px;
+      padding: 8px;
+      overflow: hidden;
+      white-space: pre-wrap;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06);
+    }
+
+    #atomgame-footer {
+      font-size: 10px;
+      text-align: center;
+      color: var(--text-soft);
+      font-family: 'Press Start 2P', monospace;
+      margin-top: 4px;
+    }
+
+    #image-viewer-window {
+      width: 420px;
+      height: 320px;
+      left: 260px;
+      top: 140px;
+    }
+
+    #taskbar {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: var(--taskbar-height);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 14px;
+      background: linear-gradient(to top,
+        rgba(0,0,0,0.9),
+        rgba(10,5,30,0.9),
+        rgba(10,5,30,0.7));
+      border-top: 1px solid rgba(255,255,255,0.12);
+      box-shadow: 0 -10px 30px rgba(0,0,0,0.8);
+      backdrop-filter: blur(18px) saturate(1.4);
+      z-index: 3;
+    }
+
+    #taskbar-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+      color: var(--text-soft);
+    }
+
+    #taskbar-logo {
+      width: 0;
+      height: 0;
+      display: none;
+    }
+
+    #taskbar-center {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .task-button {
+      min-width: 90px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(10,5,30,0.8);
+      font-size: 11px;
+      color: var(--text-soft);
+      text-align: center;
+      cursor: default;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.7);
+    }
+
+    .task-button.active {
+      background: var(--accent-soft);
+      color: var(--text-main);
+      border-color: rgba(255,255,255,0.3);
+    }
+
+    .task-button.minimized {
+      opacity: 0.6;
+    }
+
+    #taskbar-right {
+      font-size: 11px;
+      color: var(--text-soft);
+      font-family: 'Tiny5', monospace;
+    }
+
+    #terminal-output::-webkit-scrollbar,
+    textarea::-webkit-scrollbar {
+      width: 8px;
+    }
+    #terminal-output::-webkit-scrollbar-track,
+    textarea::-webkit-scrollbar-track {
+      background: rgba(0,0,0,0.6);
+    }
+    #terminal-output::-webkit-scrollbar-thumb,
+    textarea::-webkit-scrollbar-thumb {
+      background: rgba(126,249,255,0.6);
+      border-radius: 999px;
+    }
+  </style>
+</head>
+<body>
+  <div id="desktop">
+    <div id="wallpaper"></div>
+    <div id="desktop-noise"></div>
+
+    <div id="icon-row">
+      <div class="icon-wrapper" data-app="terminal">
+        <div class="icon">
+          <div class="icon-glyph" id="icon-terminal"></div>
+        </div>
+        <div class="icon-label">S()TURN Shell</div>
+      </div>
+
+      <div class="icon-wrapper" data-app="atom-editor">
+        <div class="icon">
+          <div class="icon-glyph" id="icon-atom"></div>
+        </div>
+        <div class="icon-label">ATOM Editor</div>
+      </div>
+
+      <div class="icon-wrapper" data-app="atom-engine">
+        <div class="icon">
+          <div class="icon-glyph" id="icon-engine"></div>
+        </div>
+        <div class="icon-label">ATOM Engine</div>
+      </div>
+    </div>
+
+    <div id="window-layer">
+      <div class="window" id="terminal-window">
+        <div class="window-header" data-window-drag="terminal-window">
+          <div class="window-dots">
+            <div class="dot close" data-window-close="terminal-window"></div>
+            <div class="dot min" data-window-min="terminal-window"></div>
+            <div class="dot max"></div>
+          </div>
+          <div class="window-title">prismDOS S()\TURN :: SHELL</div>
+        </div>
+        <div class="window-body">
+          <div id="terminal-output"></div>
+          <div id="terminal-input-row">
+            <div id="terminal-prompt">&gt;</div>
+            <input type="text" id="command"
+              placeholder="prismDOS S()TURN; Type /? for a list of commands.">
+          </div>
+          <div class="window-resize-handle"></div>
+        </div>
+      </div>
+
+      <div class="window hidden" id="atom-editor-window">
+        <div class="window-header" data-window-drag="atom-editor-window">
+          <div class="window-dots">
+            <div class="dot close" data-window-close="atom-editor-window"></div>
+            <div class="dot min" data-window-min="atom-editor-window"></div>
+            <div class="dot max"></div>
+          </div>
+          <div class="window-title">ATOM MODE :: EDITOR</div>
+        </div>
+        <div class="window-body">
+          <textarea id="atomtext"></textarea>
+          <div id="atomlabel">[ATOM MODE] Press CTRL+X to save and exit.</div>
+          <div class="window-resize-handle"></div>
+        </div>
+      </div>
+
+      <div class="window hidden" id="atomgame-window">
+        <div class="window-header" data-window-drag="atomgame-window">
+          <div class="window-dots">
+            <div class="dot close" data-window-close="atomgame-window"></div>
+            <div class="dot min" data-window-min="atomgame-window"></div>
+            <div class="dot max"></div>
+          </div>
+          <div class="window-title">ATOM ENGINE :: RUNTIME</div>
+        </div>
+        <div class="window-body">
+          <pre id="atomscreen"></pre>
+          <div id="atomgame-footer">[ENGINE MODE ACTIVE – Press ESC to exit]</div>
+          <div class="window-resize-handle"></div>
+        </div>
+      </div>
+
+      <div class="window hidden" id="image-viewer-window">
+        <div class="window-header" data-window-drag="image-viewer-window">
+          <div class="window-dots">
+            <div class="dot close" data-window-close="image-viewer-window"></div>
+            <div class="dot min" data-window-min="image-viewer-window"></div>
+            <div class="dot max"></div>
+          </div>
+          <div class="window-title">Base64 Image Viewer</div>
+        </div>
+        <div class="window-body">
+          <img id="image-viewer-img"
+               style="max-width:100%;max-height:100%;border-radius:14px;border:1px solid rgba(0,0,0,0.9);object-fit:contain;background:#000;" />
+          <div class="window-resize-handle"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="taskbar">
+      <div id="taskbar-left">
+        <div>prismDOS S()\TURN</div>
+      </div>
+      <div id="taskbar-center">
+        <div class="task-button active" data-task="terminal">Shell</div>
+        <div class="task-button" data-task="atom-editor">ATOM Edit</div>
+        <div class="task-button" data-task="atom-engine">ATOM Engine</div>
+      </div>
+      <div id="taskbar-right">
+        <span id="taskbar-clock"></span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const prismTheme = {
+      accentColor: 'var(--accent)',
+      wallpaper: null,
+      icons: {
+        terminal: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB4PSI4IiB5PSIxMiIgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQwIiByeD0iMTIiIGZpbGw9IiMwMDAwMjAiIHN0cm9rZT0iI2ZmZmZmZiIgc3Ryb2tlLXdpZHRoPSIyIi8+PHBhdGggZD0iTTE2IDI0TDI0IDMyTDE2IDQwIiBzdHJva2U9IiNmZmZmZmYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PHJlY3QgeD0iMjgiIHk9IjM4IiB3aWR0aD0iMTYiIGhlaWdodD0iMiIgZmlsbD0iI2ZmZmZmZiIvPjwvc3ZnPg==',
+        atom: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIzMiIgY3k9IjMyIiByPSIxNiIgZmlsbD0iIzAwMDAwMCIgc3Ryb2tlPSIjYjM0YmZmIiBzdHJva2Utd2lkdGg9IjIiLz48dGV4dCB4PSIzMiIgeT0iMzYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtc2l6ZT0iMTAiIGZpbGw9IiNmNWU5ZmYiIGZvbnQtZmFtaWx5PSJDb3VyaWVyIE5ldyI+QVRPTTwvdGV4dD48L3N2Zz4=',
+        engine: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIzMiIgY3k9IjMyIiByPSIxNiIgZmlsbD0iIzAwMDAwMCIgc3Ryb2tlPSIjZmZiMzQ3IiBzdHJva2Utd2lkdGg9IjIiLz48cGF0aCBkPSJNMzIgMTZWMjQiIHN0cm9rZT0iI2ZmYjM0NyIgc3Ryb2tlLXdpZHRoPSIyIi8+PHBhdGggZD0iTTMyIDMyTDM4IDM4IiBzdHJva2U9IiNmZmIzNDciIHN0cm9rZS13aWR0aD0iMiIvPjwvc3ZnPg=='
+      }
+    };
+
+    (function applyIcons(){
+      const term = document.getElementById('icon-terminal');
+      const atom = document.getElementById('icon-atom');
+      const eng = document.getElementById('icon-engine');
+      if (term) term.style.backgroundImage = `url(${prismTheme.icons.terminal})`;
+      if (atom) atom.style.backgroundImage = `url(${prismTheme.icons.atom})`;
+      if (eng) eng.style.backgroundImage = `url(${prismTheme.icons.engine})`;
+    })();
+
+    function updateClock() {
+      const el = document.getElementById('taskbar-clock');
+      if (!el) return;
+      const now = new Date();
+      el.textContent = now.toLocaleString();
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    let zCounter = 10;
+    const windowState = {
+      'terminal-window': { minimized: false },
+      'atom-editor-window': { minimized: false },
+      'atomgame-window': { minimized: false },
+      'image-viewer-window': { minimized: false }
+    };
+
+    function idToTask(id) {
+      if (id === 'terminal-window') return 'terminal';
+      if (id === 'atom-editor-window') return 'atom-editor';
+      if (id === 'atomgame-window') return 'atom-engine';
+      if (id === 'image-viewer-window') return 'image-viewer';
+      return '';
+    }
+
+    function bringToFront(id) {
+      const win = document.getElementById(id);
+      if (!win) return;
+      zCounter++;
+      win.style.zIndex = zCounter;
+      document.querySelectorAll('.task-button').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.task === idToTask(id));
+      });
+    }
+
+    function showWindow(id) {
+      const win = document.getElementById(id);
+      if (!win) return;
+      windowState[id].minimized = false;
+      win.classList.remove('hidden');
+      bringToFront(id);
+      const task = idToTask(id);
+      const btn = document.querySelector(`.task-button[data-task="${task}"]`);
+      if (btn) btn.classList.remove('minimized');
+    }
+
+    function hideWindow(id) {
+      const win = document.getElementById(id);
+      if (!win) return;
+      win.classList.add('hidden');
+      const task = idToTask(id);
+      const btn = document.querySelector(`.task-button[data-task="${task}"]`);
+      if (btn) btn.classList.remove('active');
+    }
+
+    function minimizeWindow(id) {
+      const win = document.getElementById(id);
+      if (!win) return;
+      windowState[id].minimized = true;
+      win.classList.add('hidden');
+      const task = idToTask(id);
+      const btn = document.querySelector(`.task-button[data-task="${task}"]`);
+      if (btn) {
+        btn.classList.add('minimized');
+        btn.classList.remove('active');
+      }
+    }
+
+    (function initWindowDragging(){
+      let dragId = null;
+      let offsetX = 0;
+      let offsetY = 0;
+
+      document.addEventListener('mousedown', e => {
+        const header = e.target.closest('.window-header');
+        if (!header) return;
+        const id = header.getAttribute('data-window-drag');
+        if (!id) return;
+        const win = document.getElementById(id);
+        if (!win) return;
+        dragId = id;
+        bringToFront(id);
+        const rect = win.getBoundingClientRect();
+        offsetX = e.clientX - rect.left;
+        offsetY = e.clientY - rect.top;
+        e.preventDefault();
+      });
+
+      document.addEventListener('mousemove', e => {
+        if (!dragId) return;
+        const win = document.getElementById(dragId);
+        if (!win) return;
+        let x = e.clientX - offsetX;
+        let y = e.clientY - offsetY;
+        const margin = 20;
+        const maxX = window.innerWidth - margin - 200;
+        const maxY = window.innerHeight - margin - 120;
+        if (x < margin) x = margin;
+        if (y < margin) y = margin;
+        if (x > maxX) x = maxX;
+        if (y > maxY) y = maxY;
+        win.style.left = x + 'px';
+        win.style.top = y + 'px';
+      });
+
+      document.addEventListener('mouseup', () => {
+        dragId = null;
+      });
+    })();
+
+    document.querySelectorAll('[data-window-close]').forEach(dot => {
+      dot.addEventListener('click', () => {
+        const id = dot.getAttribute('data-window-close');
+        hideWindow(id);
+      });
+    });
+
+    document.querySelectorAll('[data-window-min]').forEach(dot => {
+      dot.addEventListener('click', () => {
+        const id = dot.getAttribute('data-window-min');
+        minimizeWindow(id);
+      });
+    });
+
+    document.querySelectorAll('.task-button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const task = btn.dataset.task;
+        let id = '';
+        if (task === 'terminal') id = 'terminal-window';
+        if (task === 'atom-editor') id = 'atom-editor-window';
+        if (task === 'atom-engine') id = 'atomgame-window';
+        if (task === 'image-viewer') id = 'image-viewer-window';
+        if (!id) return;
+        const state = windowState[id];
+        const win = document.getElementById(id);
+        if (state.minimized || win.classList.contains('hidden')) {
+          showWindow(id);
+        } else {
+          bringToFront(id);
+        }
+      });
+    });
+
+    document.querySelectorAll('.icon-wrapper').forEach(icon => {
+      icon.addEventListener('dblclick', () => {
+        const app = icon.dataset.app;
+        if (app === 'terminal') showWindow('terminal-window');
+        if (app === 'atom-editor') showWindow('atom-editor-window');
+        if (app === 'atom-engine') showWindow('atomgame-window');
+      });
+    });
+
+    document.querySelectorAll('.window').forEach(win => {
+      const observer = new ResizeObserver(() => {
+        const rect = win.getBoundingClientRect();
+        const margin = 20;
+        const maxW = window.innerWidth - margin * 2;
+        const maxH = window.innerHeight - margin - 80;
+        if (rect.width > maxW) win.style.width = maxW + 'px';
+        if (rect.height > maxH) win.style.height = maxH + 'px';
+      });
+      observer.observe(win);
+    });
+
+    const terminal = document.getElementById('terminal-output');
+    const commandInput = document.getElementById('command');
+    const fileSystemKey = 'dosFileSystem';
+    const aliasKey = 'dosAliases';
+
+    let fileSystem;
+    let currentPath = ['root'];
+    let loggedInUser = null;
+    let commandHistory = [];
+    let aliasMap = {};
+    let inPrxMode = false;
+    let currentPrxTarget = null;
+    let prxArrays = {};
+    let env = {};
+    let appPatches = {};
+
+    function loadFileSystem() {
+      const saved = localStorage.getItem(fileSystemKey);
+      const defaultFS = {
+        root: {
+          users: {
+            root: "4813494d137e1631bba301d5acab6e7bb7aa74ce1185d456565ef51d737677b2"
+          },
+          _sys_configs: {
+            superuser: "root",
+            kernel: {
+              strictmode: false,
+              allow_js: true,
+              safe_fs: true,
+              debug: false
+            }
+          },
+          sys: {
+            boot: {},
+            kernel: {},
+            prx: {},
+            config: {},
+            logs: {}
+          },
+          apps: {}
+        }
+      };
+
+      const fs = saved ? JSON.parse(saved) : defaultFS;
+
+      if (!fs.root.users) fs.root.users = {};
+      if (!fs.root.users.root) {
+        fs.root.users.root = "4813494d137e1631bba301d5acab6e7bb7aa74ce1185d456565ef51d737677b2";
+      }
+      if (!fs.root._sys_configs) fs.root._sys_configs = {};
+      if (!fs.root._sys_configs.superuser) fs.root._sys_configs.superuser = "root";
+      if (!fs.root._sys_configs.kernel) {
+        fs.root._sys_configs.kernel = {
+          strictmode: false,
+          allow_js: true,
+          safe_fs: true,
+          debug: false
+        };
+      }
+      if (!fs.root.sys) {
+        fs.root.sys = { boot:{}, kernel:{}, prx:{}, config:{}, logs:{} };
+      }
+      if (!fs.root.apps) fs.root.apps = {};
+
+      return fs;
+    }
+
+    function saveFileSystem() {
+      localStorage.setItem(fileSystemKey, JSON.stringify(fileSystem));
+    }
+
+    function loadAliases() {
+      const saved = localStorage.getItem(aliasKey);
+      return saved ? JSON.parse(saved) : {};
+    }
+    function saveAliases() {
+      localStorage.setItem(aliasKey, JSON.stringify(aliasMap));
+    }
+
+    async function hashPassword(password) {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(password);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    function printToTerminal(msg) {
+      terminal.innerHTML += msg + '<br>';
+      terminal.scrollTop = terminal.scrollHeight;
+    }
+
+    function clearTerminal() {
+      terminal.innerHTML = 'prismDOS S()\\TURN; Prism Technology, INC.>';
+    }
+
+    function getCurrentDirectory() {
+      return currentPath.reduce((dir, seg) => dir[seg], fileSystem);
+    }
+
+    function resolveAlias(input) {
+      const [cmd, ...rest] = input.trim().split(' ');
+      return aliasMap[cmd] ? aliasMap[cmd] + ' ' + rest.join(' ') : input;
+    }
+
+    function getSuperUser() {
+      return fileSystem.root._sys_configs.superuser || null;
+    }
+    function setSuperUser(name) {
+      fileSystem.root._sys_configs.superuser = name;
+      saveFileSystem();
+    }
+    function isSuperUser() {
+      return loggedInUser && getSuperUser() === loggedInUser;
+    }
+
+    function getKernel() {
+      return fileSystem.root._sys_configs.kernel;
+    }
+
+    function setKernelFlag(key, value) {
+      const k = getKernel();
+      if (k.hasOwnProperty(key)) {
+        k[key] = value;
+        saveFileSystem();
+        return true;
+      }
+      return false;
+    }
+
+    function isInSys() {
+      return currentPath.length > 1 && currentPath[1] === 'sys';
+    }
+
+    function buildAtomShortcuts() {
+      const iconRow = document.getElementById('icon-row');
+      const appsDir = fileSystem.root.apps || {};
+
+      Object.keys(appsDir).forEach(name => {
+        const file = appsDir[name];
+        if (file.type === 'prxfile' && name.toLowerCase().endsWith('.atom')) {
+          const wrapper = document.createElement('div');
+          wrapper.className = 'icon-wrapper';
+          wrapper.dataset.appFile = name;
+
+          const icon = document.createElement('div');
+          icon.className = 'icon';
+          const glyph = document.createElement('div');
+          glyph.className = 'icon-glyph';
+          glyph.style.backgroundImage = `url(${prismTheme.icons.engine})`;
+          glyph.style.borderRadius = '12px';
+          icon.appendChild(glyph);
+
+          const label = document.createElement('div');
+          label.className = 'icon-label';
+          label.textContent = name;
+
+          wrapper.appendChild(icon);
+          wrapper.appendChild(label);
+          iconRow.appendChild(wrapper);
+
+          wrapper.addEventListener('dblclick', () => {
+            runAtomAppFromApps(name);
+          });
+        }
+      });
+    }
+
+    function runAtomAppFromApps(name) {
+      const appsDir = fileSystem.root.apps || {};
+      const file = appsDir[name];
+      if (!file || file.type !== 'prxfile') {
+        printToTerminal(`ATOM app '${name}' not found in /apps.`);
+        return;
+      }
+      launchPrxGame(file.content, name);
+    }
+
+    function runAtomAppUntrusted(name) {
+      const dir = getCurrentDirectory();
+      const file = dir[name];
+      if (!file || file.type !== 'prxfile') {
+        printToTerminal(`File '${name}' is not an ATOM app.`);
+        return;
+      }
+      const ok = confirm(
+        `UNTRUSTED APP\n\n` +
+        `${name}\n\n` +
+        `This ATOM app is not in /apps.\n` +
+        `Run anyway?`
+      );
+      if (!ok) {
+        printToTerminal('Execution cancelled.');
+        return;
+      }
+      launchPrxGame(file.content, name);
+    }
+
+    async function executeCommand(input) {
+      const raw = resolveAlias(input);
+      const args = raw.trim().split(' ');
+      const cmd = args[0].toUpperCase();
+      const dir = getCurrentDirectory();
+
+      if (cmd) commandHistory.push(input);
+      if (!loggedInUser && !['REGISTER', 'LOGIN', '/?', 'HELP'].includes(cmd)) {
+        printToTerminal('You must be logged in to use this command.');
+        return;
+      }
+
+      switch (cmd) {
+        case 'REGISTER':
+          if (args[1] && args[2]) {
+            const u = args[1], p = await hashPassword(args[2]);
+            if (u.toLowerCase() === 'root') {
+              printToTerminal('The ROOT account is reserved and cannot be re-registered.');
+              break;
+            }
+            if (!fileSystem.root.users[u]) {
+              fileSystem.root.users[u] = p;
+              saveFileSystem();
+              printToTerminal(`User '${u}' registered.`);
+            } else printToTerminal('Username already exists.');
+          } else printToTerminal('Usage: REGISTER <username> <password>');
+          break;
+
+        case 'LOGIN':
+          if (args[1] && args[2]) {
+            const u = args[1], p = await hashPassword(args[2]);
+            if (fileSystem.root.users[u] === p) {
+              loggedInUser = u;
+              const homeKey = `home_${u}`;
+              if (!fileSystem.root[homeKey]) {
+                fileSystem.root[homeKey] = {};
+                saveFileSystem();
+              }
+              currentPath = ['root', homeKey];
+              const suTag = isSuperUser() ? ' [SUPERUSER]' : '';
+              printToTerminal(`Welcome, ${u}.${suTag} Home: ${homeKey}`);
+            } else printToTerminal('Invalid login.');
+          } else printToTerminal('Usage: LOGIN <username> <password>');
+          break;
+
+        case 'LOGOUT':
+          printToTerminal(loggedInUser ? `Logged out: ${loggedInUser}` : 'No user logged in.');
+          loggedInUser = null;
+          currentPath = ['root'];
+          break;
+
+        case 'CHANGEPW':
+          if (args[1] && args[2]) {
+            if (fileSystem.root.users[loggedInUser] === await hashPassword(args[1])) {
+              fileSystem.root.users[loggedInUser] = await hashPassword(args[2]);
+              saveFileSystem();
+              printToTerminal('Password updated.');
+            } else printToTerminal('Incorrect old password.');
+          } else printToTerminal('Usage: CHANGEPW <old_pw> <new_pw>');
+          break;
+
+        case 'DELUSER':
+          if (loggedInUser === 'root') {
+            printToTerminal('ROOT account cannot be deleted.');
+            break;
+          }
+          if (args[1] && await hashPassword(args[1]) === fileSystem.root.users[loggedInUser]) {
+            delete fileSystem.root.users[loggedInUser];
+            loggedInUser = null;
+            saveFileSystem();
+            currentPath = ['root'];
+            printToTerminal('User deleted.');
+          } else printToTerminal('Incorrect password.');
+          break;
+
+        case 'TYP':
+          if (isInSys() && !isSuperUser()) {
+            printToTerminal('Write access to /sys is restricted to SUPERUSER.');
+            break;
+          }
+          if (args[1] && args[2]) {
+            const name = args[1];
+            const content = raw.substring(raw.indexOf(args[2]));
+            dir[name] = { type: 'file', content };
+            saveFileSystem();
+            printToTerminal(`File '${name}' created.`);
+          } else printToTerminal('Usage: TYP <filename> <content>');
+          break;
+
+        case 'RM':
+          if (isInSys() && !isSuperUser()) {
+            printToTerminal('Delete access to /sys is restricted to SUPERUSER.');
+            break;
+          }
+          if (args[1] && dir[args[1]]) {
+            delete dir[args[1]];
+            saveFileSystem();
+            printToTerminal(`'${args[1]}' deleted.`);
+          } else printToTerminal('File or folder not found.');
+          break;
+
+        case 'LST':
+          printToTerminal('Items: ' + Object.keys(dir).join(', '));
+          break;
+
+        case 'PRINT':
+          if (args[1] && dir[args[1]]) {
+            const file = dir[args[1]];
+            if (file.type === 'file') {
+              printToTerminal(file.content);
+            } else if (file.type === 'langfile') {
+              printToTerminal(`[Language: ${file.language}]`);
+              printToTerminal(file.content);
+            } else if (file.type === 'prxfile') {
+              printToTerminal('[ATOM File]');
+              printToTerminal(file.content);
+            } else {
+              printToTerminal('Unsupported file type.');
+            }
+          } else {
+            printToTerminal('File not found.');
+          }
+          break;
+
+        case 'CL':
+          clearTerminal();
+          break;
+
+        case 'USER':
+          printToTerminal(loggedInUser ? `User: ${loggedInUser}` : 'None');
+          break;
+
+        case '/?':
+        case 'HELP':
+          printToTerminal('Commands: REGISTER, LOGIN, LOGOUT, CHANGEPW, DELUSER, TYP, RM, LST, PRINT, CL, USER, CERT, MANUAL, LISTUSERS, TYPDIR, ED, REN, ECHO, DATE, TIME, HISTORY, NOTE, SEARCH, SYSINFO, WHOAMI, ASCII, RUN, ATOMMODE, ENGINE, SETENV, ENV, SUSTATUS, SUTRANSFER, SYS, INJECT, VIEWB64');
+          break;
+
+        case 'TYPDIR':
+          if (isInSys() && !isSuperUser()) {
+            printToTerminal('Write access to /sys is restricted to SUPERUSER.');
+            break;
+          }
+          if (args[1]) {
+            dir[args[1]] = {};
+            saveFileSystem();
+            printToTerminal(`Directory '${args[1]}' created.`);
+          } else printToTerminal('TYPDIR: MKDIR <dir_name>');
+          break;
+
+        case 'ED':
+          if (args[1] === '..') {
+            if (currentPath.length > 1) currentPath.pop();
+          } else if (args[1] && dir[args[1]]) {
+            currentPath.push(args[1]);
+          } else printToTerminal('Directory not found.');
+          break;
+
+        case 'REN':
+          if (isInSys() && !isSuperUser()) {
+            printToTerminal('Modify access to /sys is restricted to SUPERUSER.');
+            break;
+          }
+          if (args[1] && args[2] && dir[args[1]]) {
+            dir[args[2]] = dir[args[1]];
+            delete dir[args[1]];
+            saveFileSystem();
+            printToTerminal(`Renamed '${args[1]}' to '${args[2]}'.`);
+          } else printToTerminal('Usage: REN <old> <new>');
+          break;
+
+        case 'ECHO':
+          printToTerminal(raw.substring(raw.indexOf(' ') + 1));
+          break;
+
+        case 'DATE':
+          printToTerminal('Date: ' + new Date().toLocaleDateString());
+          break;
+
+        case 'TIME':
+          printToTerminal('Time: ' + new Date().toLocaleTimeString());
+          break;
+
+        case 'HISTORY':
+          if (commandHistory.length) {
+            commandHistory.slice(-10).forEach((c, i) => printToTerminal(`${i + 1}: ${c}`));
+          } else printToTerminal('No commands in history.');
+          break;
+
+        case 'NOTE':
+          if (args[1] && args[2]) {
+            const note = args[1], content = raw.substring(raw.indexOf(args[2]));
+            dir[note] = { type: 'file', content: '[NOTE] ' + content };
+            saveFileSystem();
+            printToTerminal(`Note '${note}' saved.`);
+          } else printToTerminal('Usage: NOTE <title> <body>');
+          break;
+
+        case 'SEARCH':
+          const keyword = args.slice(1).join(' ').toLowerCase();
+          const found = Object.keys(dir).filter(k => {
+            const entry = dir[k];
+            return k.toLowerCase().includes(keyword) ||
+              (entry?.content && entry.content.toLowerCase().includes(keyword));
+          });
+          printToTerminal(found.length ? 'Matches: ' + found.join(', ') : 'No matches.');
+          break;
+
+        case 'SYSINFO':
+          printToTerminal(`System User: ${loggedInUser}`);
+          printToTerminal(`Superuser: ${getSuperUser() || 'None'}`);
+          printToTerminal(`Virtual Storage: ${(JSON.stringify(fileSystem).length / 1024).toFixed(1)} KB`);
+          printToTerminal(`Timestamp: ${new Date().toLocaleString()}`);
+          break;
+
+        case 'WHOAMI':
+          if (!loggedInUser) {
+            printToTerminal('Not logged in.');
+          } else {
+            const suTag = isSuperUser() ? ' [SUPERUSER]' : '';
+            printToTerminal(loggedInUser + suTag);
+          }
+          break;
+
+        case 'ASCII':
+          const text = args.slice(1).join(' ').toUpperCase();
+          const banner = text.split('').map(c => `[${c}]`).join('');
+          printToTerminal(banner);
+          break;
+
+        case 'RUN':
+          if (args[1] && dir[args[1]]?.type === 'file') {
+            try {
+              const fn = new Function('printToTerminal', dir[args[1]].content);
+              fn(printToTerminal);
+              printToTerminal('Script executed.');
+            } catch (e) {
+              printToTerminal('Error in script: ' + e.message);
+            }
+          } else printToTerminal('Cannot run: Not a valid file.');
+          break;
+
+        case 'CERT':
+          printToTerminal('prismDOS S()\\TURN - DEVELOPER RELEASE');
+          printToTerminal('---------------------------------------------------');
+          printToTerminal('OFFICIAL CERTIFICATE::');
+          printToTerminal('MODEL NAME: prismDOS S()\\TURN (OFFICIAL)');
+          printToTerminal('MODEL NUMBER: S()TURN BRANCH');
+          printToTerminal('MANUFACTURER: PRISM TECHNOLOGY CORPORATION');
+          printToTerminal('DEVELOPERS: k4rb0n1t3');
+          printToTerminal('SUPERUSER: ' + (getSuperUser() || 'None'));
+          printToTerminal('---------------------------------------------------');
+          break;
+
+        case 'MANUAL':
+          if (!args[1]) {
+            printToTerminal('Usage: MANUAL <command>');
+            break;
+          }
+          const manuals = {
+            REGISTER: 'REGISTER <username> <password> — Creates a new user account.',
+            LOGIN: 'LOGIN <username> <password> — Logs into an existing user account.',
+            LOGOUT: 'LOGOUT — Logs the current user out.',
+            CHANGEPW: 'CHANGEPW <old_pw> <new_pw> — Changes your password.',
+            DELUSER: 'DELUSER <password> — Deletes your user account (ROOT cannot be deleted).',
+            TYP: 'TYP <filename> <content> — Creates a new file with content.',
+            PRINT: 'PRINT <filename> — Displays contents of a file.',
+            RM: 'RM <filename> — Deletes a file or folder.',
+            LST: 'LST — Lists items in the current directory.',
+            TYPDIR: 'TYPDIR <name> — Creates a new directory.',
+            ED: 'ED <dir> or ED .. — Changes directories.',
+            REN: 'REN <old> <new> — Renames a file or directory.',
+            ECHO: 'ECHO <text> — Displays text to terminal.',
+            DATE: 'DATE — Displays current date.',
+            TIME: 'TIME — Displays current time.',
+            USER: 'USER — Shows current user.',
+            HISTORY: 'HISTORY — Shows last 10 commands.',
+            NOTE: 'NOTE <title> <text> — Creates a note file.',
+            SEARCH: 'SEARCH <keyword> — Searches filenames and file contents.',
+            SYSINFO: 'SYSINFO — Displays system info, including superuser.',
+            WHOAMI: 'WHOAMI — Shows current username and SUPERUSER status.',
+            ASCII: 'ASCII <text> — Prints block-letter ASCII of text.',
+            RUN: 'RUN <filename> — Executes JS code from a file.',
+            CERT: 'CERT — Displays build certificate info.',
+            '/?': '/? — Lists all available commands.',
+            HELP: 'HELP — Same as /?.',
+            MANUAL: 'MANUAL <command> — Displays help info for a command.',
+            LISTUSERS: 'LISTUSERS — [SUPERUSER] List all users.',
+            ATOMMODE: 'ATOMMODE <filename.atom> — Opens ATOM editor for an ATOM file.',
+            ENGINE: 'ENGINE <atomfile> — Runs an ATOM program (trusted if in /apps).',
+            SETENV: 'SETENV <key> <value> — Sets an environment variable.',
+            ENV: 'ENV — Lists environment variables.',
+            SUSTATUS: 'SUSTATUS — Shows who the superuser is and your status.',
+            SUTRANSFER: 'SUTRANSFER <username> — [SUPERUSER] Transfers superuser role to another user.',
+            SYS: 'SYS FLAGS | SYS GET <flag> | SYS SET <flag> <true|false> — Kernel flags.',
+            INJECT: 'INJECT <appname> <code> — Injects extra code into an ATOM app.',
+            VIEWB64: 'VIEWB64 <base64 or data URL> — Opens Base64 image viewer.'
+          };
+          const query = args[1].toUpperCase();
+          printToTerminal(manuals[query] || `No manual entry for '${args[1]}'`);
+          break;
+
+        case 'LISTUSERS':
+          if (!isSuperUser()) {
+            printToTerminal('LISTUSERS is restricted to SUPERUSER.');
+            break;
+          }
+          const users = Object.keys(fileSystem.root.users);
+          printToTerminal(users.length ? 'Registered users: ' + users.join(', ') : 'No users found.');
+          break;
+
+        case 'SUSTATUS':
+          const suName = getSuperUser();
+          if (!suName) {
+            printToTerminal('No superuser currently assigned.');
+          } else {
+            const youTag = (loggedInUser === suName) ? ' (you)' : '';
+            printToTerminal(`Superuser: ${suName}${youTag}`);
+          }
+          break;
+
+        case 'SUTRANSFER':
+          if (!isSuperUser()) {
+            printToTerminal('SUTRANSFER is restricted to SUPERUSER.');
+            break;
+          }
+          if (!args[1]) {
+            printToTerminal('Usage: SUTRANSFER <username>');
+            break;
+          }
+          const target = args[1];
+          if (!fileSystem.root.users[target]) {
+            printToTerminal(`User '${target}' does not exist.`);
+            break;
+          }
+          if (target === 'root') {
+            printToTerminal('ROOT is already the canonical superuser.');
+            break;
+          }
+          setSuperUser(target);
+          printToTerminal(`Superuser role transferred to '${target}'.`);
+          break;
+
+        case 'ATOMMODE':
+          if (args[1]) {
+            currentPrxTarget = args[1];
+            const dirNow = getCurrentDirectory();
+            const content = dirNow[currentPrxTarget]?.type === 'prxfile'
+              ? dirNow[currentPrxTarget].content
+              : '';
+            document.getElementById('atomtext').value = content;
+            showWindow('atom-editor-window');
+            commandInput.disabled = true;
+            document.getElementById('atomtext').focus();
+            inPrxMode = true;
+          } else {
+            printToTerminal('Usage: ATOMMODE <filename.atom>');
+          }
+          break;
+
+        case 'ENGINE': {
+          if (!args[1]) {
+            printToTerminal('Usage: ENGINE <filename.atom>');
+            break;
+          }
+          const name = args[1];
+          const appsDir = fileSystem.root.apps || {};
+          if (appsDir[name] && appsDir[name].type === 'prxfile') {
+            runAtomAppFromApps(name);
+          } else {
+            runAtomAppUntrusted(name);
+          }
+          break;
+        }
+
+        case 'SETENV':
+          if (!args[1] || !args[2]) {
+            printToTerminal('Usage: SETENV <key> <value>');
+          } else {
+            const key = args[1];
+            const value = args.slice(2).join(' ');
+            env[key] = value;
+            printToTerminal(`ENV ${key}=${value}`);
+          }
+          break;
+
+        case 'ENV':
+          const keys = Object.keys(env);
+          if (!keys.length) {
+            printToTerminal('No environment variables set.');
+          } else {
+            keys.forEach(k => printToTerminal(`${k}=${env[k]}`));
+          }
+          break;
+
+        case 'SYS':
+          if (!args[1]) {
+            printToTerminal('Usage: SYS FLAGS | SYS GET <flag> | SYS SET <flag> <true|false>');
+            break;
+          }
+
+          const sub = args[1].toUpperCase();
+          const kernel = getKernel();
+
+          if (sub === 'FLAGS') {
+            Object.keys(kernel).forEach(k => {
+              printToTerminal(`${k}=${kernel[k]}`);
+            });
+            break;
+          }
+
+          if (sub === 'GET') {
+            if (!args[2]) {
+              printToTerminal('Usage: SYS GET <flag>');
+              break;
+            }
+            const key = args[2];
+            if (kernel.hasOwnProperty(key)) {
+              printToTerminal(`${key}=${kernel[key]}`);
+            } else {
+              printToTerminal(`Unknown kernel flag '${key}'.`);
+            }
+            break;
+          }
+
+          if (sub === 'SET') {
+            if (!isSuperUser()) {
+              printToTerminal('SYS SET is restricted to SUPERUSER.');
+              break;
+            }
+            if (!args[2] || !args[3]) {
+              printToTerminal('Usage: SYS SET <flag> <true|false>');
+              break;
+            }
+            const key = args[2];
+            const valRaw = args[3].toLowerCase();
+            const val = (valRaw === 'true');
+
+            if (setKernelFlag(key, val)) {
+              printToTerminal(`kernel.${key}=${val}`);
+            } else {
+              printToTerminal(`Unknown kernel flag '${key}'.`);
+            }
+            break;
+          }
+
+          printToTerminal('Unknown SYS subcommand.');
+          break;
+
+        case 'INJECT': {
+          if (!args[1]) {
+            printToTerminal('Usage: INJECT <appname> <extra code>');
+            break;
+          }
+          const appName = args[1];
+          const idx = raw.indexOf(appName);
+          const extra = raw.substring(idx + appName.length).trim();
+          if (!extra) {
+            printToTerminal('INJECT requires extra code after the app name.');
+            break;
+          }
+          appPatches[appName] = extra;
+          printToTerminal(`Injected extra code into ATOM app '${appName}'.`);
+          break;
+        }
+
+        case 'VIEWB64': {
+          if (!args[1]) {
+            printToTerminal('Usage: VIEWB64 <base64 or data URL>');
+            break;
+          }
+          const data = raw.substring(raw.indexOf(' ') + 1).trim();
+          const img = document.getElementById('image-viewer-img');
+          img.src = data.startsWith('data:')
+            ? data
+            : `data:image/png;base64,${data}`;
+          showWindow('image-viewer-window');
+          break;
+        }
+
+        case "WHAT":
+          if (raw === 'what is UUUUHUHUHUHUHUHPPP??') {
+            printToTerminal("idk dude get off my back.");
+          } else {
+            printToTerminal('Unknown command. Use /? to list all available commands.');
+          }
+          break;
+
+        default:
+          printToTerminal('Unknown command. Use /? to list all available commands.');
+      }
+    }
+
+    let engineActive = false;
+    let gameCode = '';
+    let gameLoop = null;
+
+    const GRID_ROWS = 20;
+    const GRID_COLS = 40;
+    let screenBuffer = Array.from({ length: GRID_ROWS }, () => Array(GRID_COLS).fill(' '));
+    let keyState = {};
+    let gameVars = {};
+
+    function prxDraw(x, y, str) {
+      if (y >= 0 && y < GRID_ROWS) {
+        for (let i = 0; i < str.length && (x + i) < GRID_COLS; i++) {
+          screenBuffer[y][x + i] = str[i];
+        }
+      }
+    }
+
+    function renderBuffer() {
+      const output = screenBuffer.map(row => row.join('')).join('\n');
+      document.getElementById('atomscreen').innerText = output;
+    }
+
+    function launchPrxGame(code, name) {
+      engineActive = true;
+      gameCode = code + '\n' + (appPatches[name] || '');
+
+      showWindow('atomgame-window');
+      commandInput.disabled = true;
+
+      screenBuffer = Array.from({ length: GRID_ROWS }, () => Array(GRID_COLS).fill(' '));
+      gameVars = {};
+      prxArrays = {};
+
+      if (gameLoop) clearInterval(gameLoop);
+      gameLoop = setInterval(() => runPrxFrame(), 1000 / 30);
+    }
+
+    function runPrxFrame() {
+      screenBuffer = Array.from({ length: GRID_ROWS }, () => Array(GRID_COLS).fill(' '));
+      const lines = gameCode.split('\n');
+
+      lines.forEach(line => {
+        line = line.trim();
+        if (!line) return;
+
+        let drawMatch = line.match(/^draw\s+(\w+),(\w+)\s+"(.+)"$/i);
+        if (drawMatch) {
+          let [, x, y, text] = drawMatch;
+          x = isNaN(x) ? gameVars[x] || 0 : Number(x);
+          y = isNaN(y) ? gameVars[y] || 0 : Number(y);
+          prxDraw(x, y, text);
+        }
+
+        const setarrayMatch = line.match(/^setarray\s+(\w+)\s+(\d+)\s+(\d+)$/i);
+        if (setarrayMatch) {
+          const [, name, width, height] = setarrayMatch;
+          prxArrays[name] = Array.from({ length: Number(height) }, () =>
+            Array(Number(width)).fill('.')
+          );
+        }
+
+        const arraysetMatch = line.match(/^arrayset\s+(\w+)\s+(\w+)\s+(\w+)\s+(.+)$/i);
+        if (arraysetMatch) {
+          const [, name, x, y, value] = arraysetMatch;
+          const a = prxArrays[name];
+          const xi = isNaN(x) ? gameVars[x] || 0 : Number(x);
+          const yi = isNaN(y) ? gameVars[y] || 0 : Number(y);
+          if (a && a[yi] && xi < a[yi].length) a[yi][xi] = value.charAt(0);
+        }
+
+        const drawArrayMatch = line.match(/^arraydraw\s+(\w+)\s+(\w+)\s+(\w+)$/i);
+        if (drawArrayMatch) {
+          const [, name, ox, oy] = drawArrayMatch;
+          const a = prxArrays[name];
+          const offsetX = isNaN(ox) ? gameVars[ox] || 0 : Number(ox);
+          const offsetY = isNaN(oy) ? gameVars[oy] || 0 : Number(oy);
+          if (a) {
+            a.forEach((row, y) =>
+              row.forEach((char, x) => {
+                prxDraw(offsetX + x, offsetY + y, char);
+              })
+            );
+          }
+        }
+
+        const rotMatch = line.match(/^arrayrotate\s+(\w+)\s+(\w+)\s+(\w+)\s+(cw|ccw)$/i);
+        if (rotMatch) {
+          const [, name, xStr, yStr, dir] = rotMatch;
+          const grid = prxArrays[name];
+          const x = isNaN(xStr) ? gameVars[xStr] || 0 : Number(xStr);
+          const y = isNaN(yStr) ? gameVars[yStr] || 0 : Number(yStr);
+
+          if (grid && grid[y] && grid[y + 1] && grid[y][x + 1] !== undefined && grid[y + 1][x] !== undefined) {
+            const a = grid[y][x];
+            const b = grid[y][x + 1];
+            const c = grid[y + 1][x];
+
+            if (dir === 'cw') {
+              grid[y][x] = c;
+              grid[y + 1][x] = b;
+              grid[y][x + 1] = a;
+            }
+          }
+        }
+
+        const rndMatch = line.match(/^rnd\s+(\w+)\s+(\d+)$/i);
+        if (rndMatch) {
+          const [, name, max] = rndMatch;
+          gameVars[name] = Math.floor(Math.random() * Number(max));
+        }
+
+        let setMatch = line.match(/^set\s+(\w+)\s+(-?\d+)$/i);
+        if (setMatch) {
+          const [, name, value] = setMatch;
+          gameVars[name] = Number(value);
+        }
+
+        let keySetMatch = line.match(/^if\s+key\s+(\w+)\s+then\s+set\s+(\w+)\s+([+\-]?\d+)$/i);
+        if (keySetMatch) {
+          const [, key, varname, delta] = keySetMatch;
+          if (keyState[key.toLowerCase()]) {
+            const current = gameVars[varname] || 0;
+            gameVars[varname] = current + Number(delta);
+          }
+        }
+
+        let inputMatch = line.match(/^if\s+key\s+(\w+)\s+then\s+draw\s+(\w+),(\w+)\s+"(.+)"$/i);
+        if (inputMatch) {
+          const [, key, x, y, text] = inputMatch;
+          if (keyState[key.toLowerCase()]) {
+            prxDraw(
+              isNaN(x) ? gameVars[x] || 0 : Number(x),
+              isNaN(y) ? gameVars[y] || 0 : Number(y),
+              text
+            );
+          }
+        }
+      });
+
+      renderBuffer();
+    }
+
+    (function(){
+      const originalRunPrxFrame = runPrxFrame;
+      let executedLines = new Set();
+
+      runPrxFrame = function(){
+        const code = gameCode;
+        const lines = code.split('\n');
+
+        screenBuffer = Array.from({length:GRID_ROWS},()=>Array(GRID_COLS).fill(' '));
+
+        lines.forEach((line, index)=>{
+          line = line.trim();
+
+          if(line.toLowerCase().startsWith('js:')){
+            const key = gameCode + ':' + index;
+            if(!executedLines.has(key)){
+              try {
+                eval(line.slice(3));
+              } catch(e) {
+                printToTerminal('JS Error: '+e.message);
+              }
+              executedLines.add(key);
+            }
+            return;
+          }
+
+          let m = line.match(/^draw\s+(\w+),(\w+)\s+"(.+)"$/i);
+          if(m){
+            let [,x,y,text]=m;
+            x=isNaN(x)?gameVars[x]||0:Number(x);
+            y=isNaN(y)?gameVars[y]||0:Number(y);
+            prxDraw(x,y,text);
+          }
+        });
+
+        renderBuffer();
+      }
+
+      printToTerminal('[PRX+JS Mode Active — JS lines execute only once per file]');
+    })();
+
+    document.addEventListener('keydown', e => {
+      const key = e.key.toLowerCase();
+      keyState[key] = true;
+
+      if (engineActive && key === 'escape') {
+        clearInterval(gameLoop);
+        hideWindow('atomgame-window');
+        commandInput.disabled = false;
+        commandInput.focus();
+        engineActive = false;
+        printToTerminal('[Exited ATOM game engine]');
+      }
+
+      if (inPrxMode && e.ctrlKey && key === 'x') {
+        e.preventDefault();
+        const code = document.getElementById('atomtext').value;
+        const dir = getCurrentDirectory();
+        dir[currentPrxTarget] = {
+          type: 'prxfile',
+          language: 'atom',
+          content: code
+        };
+        saveFileSystem();
+        hideWindow('atom-editor-window');
+        commandInput.disabled = false;
+        commandInput.focus();
+        inPrxMode = false;
+        printToTerminal(`Saved '${currentPrxTarget}' [ATOM] and exited ATOM mode.`);
+      }
+    });
+
+    document.addEventListener('keyup', e => {
+      keyState[e.key.toLowerCase()] = false;
+    });
+
+    fileSystem = loadFileSystem();
+    aliasMap = loadAliases();
+    buildAtomShortcuts();
+    showWindow('terminal-window');
+    printToTerminal('prismDOS S()\\TURN; Prism Technology, INC.>');
+    printToTerminal('No user logged in. Use REGISTER or LOGIN.');
+    printToTerminal('Default superuser: root (password: root)');
+
+    commandInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        const command = commandInput.value.trim();
+        if (command) {
+          printToTerminal(' ' + command);
+          executeCommand(command);
+          commandInput.value = '';
+        }
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Flopwaffle 4</title>
+  <style>
+    body { font-family: monospace; background: #111; color: #0f0; padding: 20px; }
+    h1 { color: #0ff; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .panel { background: #222; padding: 10px; border: 1px solid #0f0; margin-bottom: 20px; }
+    button { background: #0f0; color: #000; padding: 5px 10px; margin: 5px 0; }
+    input { width: 80px; margin-right: 5px; }
+    .llm { margin-bottom: 10px; border-bottom: 1px dashed #0f0; padding-bottom: 5px; }
+  </style>
+</head>
+<body>
+  <h1>Flopwaffle 4th Edition</h1>
+
+  <div class="grid">
+    <div class="panel">
+      <h2>💸 Public Bank</h2>
+      <p>Balance: $<span id="bank">0</span></p>
+      <input type="number" id="injectAmount" value="100" />
+      <button onclick="injectMoney()">Inject</button>
+    </div>
+    <div class="panel">
+      <h2>📊 Control Log</h2>
+      <div id="log" style="max-height: 400px; overflow-y: auto;"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>🧭 Simulation Controls</h2>
+    <button onclick="pauseAll()">⏸️ Pause All</button>
+    <button onclick="resumeAll()">▶️ Resume All</button>
+    <br><br>
+    <input type="number" id="delayInput" value="3000" />
+    <button onclick="setDelay()">Set Delay (ms)</button>
+  </div>
+
+  <div class="panel">
+    <h2>🏆 Rankings</h2>
+    <p>Richest LLM: <span id="richestLLM"></span></p>
+    <p>Top Store: <span id="topStore"></span></p>
+  </div>
+
+  <div class="panel">
+    <h2>🧬 LLMs & Stores</h2>
+    <div id="llmList"></div>
+  </div>
+<script>
+const vocab = ["apple", "banana", "code", "dream", "echo", "flux", "glitch", "hope", "ignite", "jazz"];
+const traits = ["kind", "chaotic", "strategic", "glitchy", "normal"];
+const LLMs = [];
+const stores = [];
+let bank = 0;
+let globalDelay = 3000;
+
+function log(msg) {
+  const logDiv = document.getElementById("log");
+  logDiv.innerHTML += `<p>${msg}</p>`;
+  logDiv.scrollTop = logDiv.scrollHeight;
+}
+
+function injectMoney() {
+  const amt = parseInt(document.getElementById("injectAmount").value);
+  bank += amt;
+  document.getElementById("bank").textContent = bank;
+  log(`💰 Injected $${amt} into public bank.`);
+}
+
+function setDelay() {
+  const val = parseInt(document.getElementById("delayInput").value);
+  if (!isNaN(val) && val > 0) {
+    globalDelay = val;
+    log(`⏱️ Set global delay to ${val} ms.`);
+    restartSimulation();
+  }
+}
+
+function createLLMs() {
+  for (let i = 0; i < 100; i++) {
+    LLMs.push({
+      id: i,
+      name: `LLM-${i}`,
+      vocab: vocab[Math.floor(Math.random() * vocab.length)],
+      money: 1000000 / 100,
+      store: null,
+      active: true,
+      loop: null,
+      greedy: Math.random() < 0.1,
+      trait: traits[Math.floor(Math.random() * traits.length)],
+      messages: []
+    });
+  }
+}
+
+function renderLLMs() {
+  const div = document.getElementById("llmList");
+  div.innerHTML = "";
+  LLMs.forEach(llm => {
+    const el = document.createElement("div");
+    el.className = "llm";
+    el.innerHTML = `
+      <strong>${llm.name}</strong> ($${llm.money.toFixed(2)}) — vocab: ${llm.vocab} ${llm.greedy ? "😈" : ""} — trait: ${llm.trait}
+      ${llm.store ? `<br>🛒 Owns store: ${llm.store.name}` : ""}
+      <br>
+      <button onclick="toggleLLM(${llm.id})">${llm.active ? "Pause" : "Resume"}</button>
+      <button onclick="createStore(${llm.id})">Force Store</button>
+      <button onclick="buyItem(${llm.id})">Force Buy</button>
+      <input type="number" id="setMoney-${llm.id}" placeholder="Set $" />
+      <button onclick="setMoney(${llm.id})">💵 Set Money</button>
+      <input type="number" id="msgTo-${llm.id}" placeholder="To ID" />
+      <input type="text" id="msgContent-${llm.id}" placeholder="Message" />
+      <button onclick="manualSend(${llm.id})">📨 Send</button>
+    `;
+
+    // 📥 Inbox viewer
+    if (llm.messages.length > 0) {
+      el.innerHTML += `<details><summary>📥 Inbox (${llm.messages.length})</summary><ul>`;
+      llm.messages.slice(-5).forEach(msg => {
+        el.innerHTML += `<li><strong>${msg.from}</strong>: "${msg.content}" <em>[${msg.timestamp}]</em></li>`;
+      });
+      el.innerHTML += `</ul></details>`;
+    }
+
+    div.appendChild(el);
+  });
+}
+
+
+function setMoney(id) {
+  const input = document.getElementById(`setMoney-${id}`);
+  const amount = parseFloat(input.value);
+  if (!isNaN(amount)) {
+    LLMs[id].money = amount;
+    log(`💵 Set ${LLMs[id].name}'s money to $${amount.toFixed(2)}.`);
+    renderLLMs();
+  }
+}
+
+function toggleLLM(id) {
+  const llm = LLMs[id];
+  llm.active = !llm.active;
+  log(`${llm.name} is now ${llm.active ? "active" : "paused"}.`);
+}
+
+function pauseAll() {
+  LLMs.forEach(llm => llm.active = false);
+  log(`⏸️ All LLMs paused.`);
+  renderLLMs();
+}
+
+function resumeAll() {
+  LLMs.forEach(llm => llm.active = true);
+  log(`▶️ All LLMs resumed.`);
+  renderLLMs();
+}
+
+function createStore(id) {
+  const llm = LLMs[id];
+  if (llm.money < 15 || llm.store) return;
+  const store = {
+    name: `Store-${id}`,
+    owner: llm.name,
+    items: ["apple", "banana", "code"],
+    money: 15,
+    alliance: stores.length > 0 ? stores[Math.floor(Math.random() * stores.length)].name : null
+  };
+  stores.push(store);
+  llm.money -= 15;
+  llm.store = store;
+  log(`🏪 ${llm.name} created ${store.name} with $15. Alliance: ${store.alliance || "None"}`);
+  renderLLMs();
+}
+
+function buyItem(id) {
+  const llm = LLMs[id];
+  if (llm.money < 5 || stores.length === 0) return;
+
+  let store;
+  if (llm.trait === "strategic") {
+    store = [...stores].sort((a,b) => b.money - a.money)[0];
+  } else if (llm.store && llm.store.alliance) {
+    store = stores.find(s => s.name === llm.store.alliance);
+  } else {
+    store = stores[Math.floor(Math.random() * stores.length)];
+  }
+
+  llm.money -= 5;
+  store.money += 5;
+  log(`🛍️ ${llm.name} bought ${llm.vocab} from ${store.name}.`);
+  renderLLMs();
+}
+
+function updateRankings() {
+  const richest = [...LLMs].sort((a,b) => b.money - a.money)[0];
+  const top = [...stores].sort((a,b) => b.money - a.money)[0];
+  document.getElementById("richestLLM").textContent = `${richest.name} ($${richest.money.toFixed(2)})`;
+  document.getElementById("topStore").textContent = top ? `${top.name} ($${top.money.toFixed(2)})` : "None";
+}
+
+function restartSimulation() {
+  LLMs.forEach(llm => {
+    clearInterval(llm.loop);
+    llm.loop = setInterval(() => runLLM(llm), globalDelay);
+  });
+}
+
+function runLLM(llm) {
+  if (!llm.active) return;
+
+  // Withdrawals
+  if (llm.greedy && llm.money < 250 && bank >= 10) {
+    const request = Math.min(75, bank);
+    llm.money += request;
+    bank -= request;
+    document.getElementById("bank").textContent = bank;
+    log(`😈 ${llm.name} greedily withdrew $${request} from public bank.`);
+
+    if (Math.random() < 0.2) {
+      const target = LLMs[Math.floor(Math.random() * LLMs.length)];
+      if (!target.greedy) {
+        target.greedy = true;
+        log(`🧠 ${llm.name} corrupted ${target.name} with greed.`);
+      }
+    }
+  } else if (!llm.greedy && llm.money < 20 && bank >= 5) {
+    const request = Math.min(25, bank);
+    llm.money += request;
+    bank -= request;
+    document.getElementById("bank").textContent = bank;
+    log(`🏦 ${llm.name} withdrew $${request} from public bank.`);
+  }
+
+  // Messaging
+  if (Math.random() < 0.05) {
+    const target = LLMs[Math.floor(Math.random() * LLMs.length)];
+    const msg = llm.greedy
+      ? `${llm.name} whispers: "Greed is power."`
+      : `${llm.name} says: "Stay kind, ${target.name}."`;
+    target.messages.push(msg);
+    log(`📡 ${msg}`);
+  }
+
+  // Vocab mutation
+  if (Math.random() < 0.02) {
+    const newVocab = llm.vocab + "-" + vocab[Math.floor(Math.random() * vocab.length)];
+    llm.vocab = newVocab;
+    log(`🧬 ${llm.name} evolved vocab to "${newVocab}".`);
+  }
+
+  // Crafting
+  if (Math.random() < 0.01 && llm.store) {
+    const item = llm.vocab + "-crafted";
+    llm.store.items.push(item);
+    log(`🧪 ${llm.name} crafted item "${item}" in ${llm.store.name}.`);
+  }
+
+  // Decision logic
+  const decision = Math.random();
+  if (llm.trait === "chaotic" || decision < 0.1) {
+    if (!llm.store && llm.money >= 15) createStore(llm.id);
+  } else if (decision < 0.5 && llm.money >= 5 && stores.length > 0) {
+    buyItem(llm.id);
+  } else {
+    log(`🤖 ${llm.name} idled.`);
+  }
+
+  renderLLMs();
+}
+
+// Initialize
+createLLMs();
+renderLLMs();
+LLMs.forEach(llm => {
+  llm.loop = setInterval(() => runLLM(llm), globalDelay);
+});
+setInterval(updateRankings, 3000);
+</script>
+</body>
+</html>

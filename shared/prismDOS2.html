@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="UTF-8">
+<!-- This site is hosted on Netlify. Anyone can build and deploy a site
+     like this one for free: https://netlify.new/?utm_campaign=loops&utm_source=ai-legible&utm_medium=owned&utm_content=comment&utm_id=189903c6-3265-4850-9dc7-efaa4bd37ceb
+     Netlify hosting facts for this site: static/SSR served via Netlify Edge. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>prismDOS PUBLIC Build 0002.1</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&amp;family=Tiny5&amp;display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&amp;display=swap" rel="stylesheet">
+  <style>
+    body {
+      background-color: rgb(4, 0, 0);
+      color: rgb(21, 255, 0);
+      font-family: 'Tiny5';
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    #terminal {
+      flex-grow: 1;
+      height: 800px;
+      border: 1px solid blue;
+      overflow-y: scroll;
+      padding: 10px;
+      box-sizing: border-box;
+    }
+    #command-container {
+      display: flex;
+    }
+    #command {
+      background-color: rgb(0, 0, 0);
+      color: rgb(225, 255, 0);
+      border: none;
+      width: 100%;
+      font-family: 'Tiny5';
+      font-size: 16px;
+      padding: 10px;
+      box-sizing: border-box;
+    }
+  </style>
+</head>
+<body>
+  <div id="terminal">prismDOS PUBLIC Build 0002.1; Prism Technology, INC.&gt;<br>No user logged in. Use REGISTER or LOGIN.<br></div>
+  <div id="command-container">
+    <input type="text" id="command" autofocus="" placeholder="prismDOS PUBLIC Build 0002.1; Type /? for a list of commands.">
+  </div>
+  <div id="prxmode" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; border:8px solid orange; color:orange; font-family:'Press Start 2P'; box-sizing:border-box; padding:16px;">
+  <textarea id="prxtext" style="width:100%; height:80%; background:black; color:orange; border:4px solid orange; font-family:'Press Start 2P'; font-size:12px; resize:none; box-sizing:border-box;"></textarea>
+  <div id="prxlabel" style="margin-top:12px;">[PRX MODE] Press CTRL+S to save and exit.</div>
+</div>
+<div id="prxgame" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; background:black; color:orange; font-family:'Press Start 2P'; border:8px solid orange; padding:16px; box-sizing:border-box; overflow:hidden;">
+  <pre id="prxscreen" style="white-space:pre-wrap; font-size:14px;"></pre>
+  <div style="position:absolute; bottom:12px; width:100%; text-align:center; font-size:12px;">[ENGINE MODE ACTIVE – Press ESC to exit]</div>
+</div>
+<script>
+const terminal = document.getElementById('terminal');
+const commandInput = document.getElementById('command');
+const fileSystemKey = 'dosFileSystem';
+const aliasKey = 'dosAliases';
+let fileSystem;
+let currentPath = ['root'];
+let loggedInUser = null;
+let commandHistory = [];
+let aliasMap = {};
+let inPrxMode = false;
+let currentPrxTarget = null;
+let prxArrays = {};
+
+function loadFileSystem() {
+  const saved = localStorage.getItem(fileSystemKey);
+  const defaultFS = { root: { users: {}, _sys_configs: {} } };
+  const fs = saved ? JSON.parse(saved) : defaultFS;
+  if (!fs.root.users) fs.root.users = {};
+  if (!fs.root._sys_configs) fs.root._sys_configs = {};
+  return fs;
+}
+
+function loadAliases() {
+  const saved = localStorage.getItem(aliasKey);
+  return saved ? JSON.parse(saved) : {};
+}
+
+function saveFileSystem() {
+  localStorage.setItem(fileSystemKey, JSON.stringify(fileSystem));
+}
+
+function saveAliases() {
+  localStorage.setItem(aliasKey, JSON.stringify(aliasMap));
+}
+
+async function hashPassword(password) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function printToTerminal(msg) {
+  terminal.innerHTML += msg + '<br>';
+  terminal.scrollTop = terminal.scrollHeight;
+}
+
+function clearTerminal() {
+  terminal.innerHTML = 'prismDOS PUBLIC Build 0002.1; Prism Technology, INC.>';
+}
+
+function getCurrentDirectory() {
+  return currentPath.reduce((dir, seg) => dir[seg], fileSystem);
+}
+
+function setCurrentDirectory(pathArr) {
+  currentPath = pathArr;
+}
+
+function resolveAlias(input) {
+  const [cmd, ...rest] = input.trim().split(' ');
+  return aliasMap[cmd] ? aliasMap[cmd] + ' ' + rest.join(' ') : input;
+}
+
+async function executeCommand(input) {
+  const raw = resolveAlias(input);
+  const args = raw.trim().split(' ');
+  const cmd = args[0].toUpperCase();
+  const dir = getCurrentDirectory();
+
+  if (cmd) commandHistory.push(input);
+  if (!loggedInUser && !['REGISTER', 'LOGIN', '/?', 'HELP'].includes(cmd)) {
+    printToTerminal('You must be logged in to use this command.');
+    return;
+  }
+
+  switch (cmd) {
+    case 'REGISTER':
+      if (args[1] && args[2]) {
+        const u = args[1], p = await hashPassword(args[2]);
+        if (!fileSystem.root.users[u]) {
+          fileSystem.root.users[u] = p;
+          printToTerminal(`User '${u}' registered.`);
+          saveFileSystem();
+        } else printToTerminal('Username already exists.');
+      } else printToTerminal('Usage: REGISTER <username> <password>');
+      break;
+
+    case 'LOGIN':
+      if (args[1] && args[2]) {
+        const u = args[1], p = await hashPassword(args[2]);
+        if (fileSystem.root.users[u] === p) {
+          loggedInUser = u;
+          printToTerminal(`Welcome, ${u}.`);
+        } else printToTerminal('Invalid login.');
+      } else printToTerminal('Usage: LOGIN <username> <password>');
+      break;
+
+    case 'LOGOUT':
+      printToTerminal(loggedInUser ? `Logged out: ${loggedInUser}` : 'No user logged in.');
+      loggedInUser = null;
+      break;
+
+    case 'CHANGEPW':
+      if (args[1] && args[2]) {
+        if (fileSystem.root.users[loggedInUser] === await hashPassword(args[1])) {
+          fileSystem.root.users[loggedInUser] = await hashPassword(args[2]);
+          printToTerminal('Password updated.');
+          saveFileSystem();
+        } else printToTerminal('Incorrect old password.');
+      } else printToTerminal('Usage: CHANGEPW <old_pw> <new_pw>');
+      break;
+
+    case 'DELUSER':
+      if (args[1] && await hashPassword(args[1]) === fileSystem.root.users[loggedInUser]) {
+        delete fileSystem.root.users[loggedInUser];
+        loggedInUser = null;
+        saveFileSystem();
+        printToTerminal('User deleted.');
+      } else printToTerminal('Incorrect password.');
+      break;
+
+    case 'TYP':
+      if (args[1] && args[2]) {
+        const name = args[1];
+        const content = raw.substring(raw.indexOf(args[2]));
+        dir[name] = { type: 'file', content };
+        saveFileSystem();
+        printToTerminal(`File '${name}' created.`);
+      } else printToTerminal('Usage: TYP <filename> <content>');
+      break;
+
+    case 'RM':
+      if (args[1] && dir[args[1]]) {
+        delete dir[args[1]];
+        saveFileSystem();
+        printToTerminal(`'${args[1]}' deleted.`);
+      } else printToTerminal('File or folder not found.');
+      break;
+
+    case 'LST':
+      printToTerminal('Items: ' + Object.keys(dir).join(', '));
+      break;
+
+case 'PRINT':
+  if (args[1] && dir[args[1]]) {
+    const file = dir[args[1]];
+    if (file.type === 'file') {
+      printToTerminal(file.content);
+    } else if (file.type === 'langfile') {
+      printToTerminal(`[Language: ${file.language}]`);
+      printToTerminal(file.content);
+    } else if (file.type === 'prxfile') {
+      printToTerminal('[PRX File]');
+      printToTerminal(file.content);
+    } else {
+      printToTerminal('Unsupported file type.');
+    }
+  } else {
+    printToTerminal('File not found.');
+  }
+  break;
+
+    case 'CL':
+      clearTerminal();
+      break;
+
+    case 'USER':
+      printToTerminal(loggedInUser ? `User: ${loggedInUser}` : 'None');
+      break;
+
+    case '/?':
+    case 'HELP':
+      printToTerminal('Commands: REGISTER, LOGIN, LOGOUT, CHANGEPW, DELUSER, TYP, RM, LST, PRINT, CL, USER, CERT');
+      printToTerminal('Extras: TYPDIR, ED, REN, ECHO, DATE, TIME, HISTORY, ALIAS, COLOR, NOTE, SEARCH, SYSINFO, WHOAMI, ASCII, RUN');
+      break;
+
+    case 'TYPDIR':
+      if (args[1]) {
+        dir[args[1]] = {};
+        saveFileSystem();
+        printToTerminal(`Directory '${args[1]}' created.`);
+      } else printToTerminal('TYPDIR: MKDIR <dir_name>');
+      break;
+
+    case 'ED':
+      if (args[1] === '..') {
+        if (currentPath.length > 1) currentPath.pop();
+      } else if (args[1] && dir[args[1]]) {
+        currentPath.push(args[1]);
+      } else printToTerminal('Directory not found.');
+      break;
+
+    case 'REN':
+      if (args[1] && args[2] && dir[args[1]]) {
+        dir[args[2]] = dir[args[1]];
+        delete dir[args[1]];
+        saveFileSystem();
+        printToTerminal(`Renamed '${args[1]}' to '${args[2]}'.`);
+      } else printToTerminal('Usage: REN <old> <new>');
+      break;
+
+    case 'ECHO':
+      printToTerminal(raw.substring(raw.indexOf(' ') + 1));
+      break;
+
+    case 'DATE':
+      printToTerminal('Date: ' + new Date().toLocaleDateString());
+      break;
+
+    case 'TIME':
+      printToTerminal('Time: ' + new Date().toLocaleTimeString());
+           break;
+
+    case 'HISTORY':
+      if (commandHistory.length) {
+        commandHistory.slice(-10).forEach((c, i) => printToTerminal(`${i + 1}: ${c}`));
+      } else printToTerminal('No commands in history.');
+      break;
+
+    case 'NOTE':
+      if (args[1] && args[2]) {
+        const note = args[1], content = raw.substring(raw.indexOf(args[2]));
+        dir[note] = { type: 'file', content: '[NOTE] ' + content };
+        saveFileSystem();
+        printToTerminal(`Note '${note}' saved.`);
+      } else printToTerminal('Usage: NOTE <title> <body>');
+      break;
+
+    case 'SEARCH':
+      const keyword = args.slice(1).join(' ').toLowerCase();
+      const found = Object.keys(dir).filter(k => {
+        const entry = dir[k];
+        return k.toLowerCase().includes(keyword) ||
+          (entry?.content && entry.content.toLowerCase().includes(keyword));
+      });
+      printToTerminal(found.length ? 'Matches: ' + found.join(', ') : 'No matches.');
+      break;
+
+    case 'SYSINFO':
+      printToTerminal(`System User: ${loggedInUser}`);
+      printToTerminal(`Virtual Storage: ${(JSON.stringify(fileSystem).length / 1024).toFixed(1)} KB`);
+      printToTerminal(`Timestamp: ${new Date().toLocaleString()}`);
+      break;
+
+    case 'WHOAMI':
+      printToTerminal(loggedInUser || 'Not logged in.');
+      break;
+
+    case 'ASCII':
+      const text = args.slice(1).join(' ').toUpperCase();
+      const banner = text.split('').map(c => `[${c}]`).join('');
+      printToTerminal(banner);
+      break;
+
+    case 'RUN':
+      if (args[1] && dir[args[1]]?.type === 'file') {
+        try {
+          eval(dir[args[1]].content);
+          printToTerminal('Script executed.');
+        } catch (e) {
+          printToTerminal('Error in script: ' + e.message);
+        }
+      } else printToTerminal('Cannot run: Not a valid file.');
+      break;
+
+    case 'CERT':
+      printToTerminal('---------------------------------------------------');
+      printToTerminal('OFFICIAL CERTIFICATE::');
+      printToTerminal('MODEL NAME: prismDOS MODEL 0002.1 (OFFICIAL)');
+      printToTerminal('MODEL NUMBER: 0008.1 (PUBLIC BUILD 0002.1)');
+      printToTerminal('MANUFACTURER: PRISM TECHNOLOGY CORPORATION');
+      printToTerminal('DEVELOPERS: MAXIMILIAN X. HICKS; YASH R. CHALLA');
+      printToTerminal('RELEASE DATE: 6;22;2025');
+      printToTerminal('---------------------------------------------------');
+      break;
+case 'MANUAL':
+  if (!args[1]) {
+    printToTerminal('Usage: MANUAL <command>');
+    break;
+  }
+
+  const manuals = {
+    REGISTER: 'REGISTER <username> <password> — Creates a new user account.',
+    LOGIN: 'LOGIN <username> <password> — Logs into an existing user account.',
+    LOGOUT: 'LOGOUT — Logs the current user out.',
+    CHANGEPW: 'CHANGEPW <old_pw> <new_pw> — Changes your password.',
+    DELUSER: 'DELUSER <password> — Deletes your user account.',
+    TYP: 'TYP <filename> <content> — Creates a new file with content.',
+    PRINT: 'PRINT <filename> — Displays contents of a file.',
+    RM: 'RM <filename> — Deletes a file or folder.',
+    LST: 'LST — Lists items in the current directory.',
+    MKDIR: 'MKDIR <name> — Creates a new directory.',
+    CD: 'CD <dir> or CD .. — Changes directories.',
+    REN: 'REN <old> <new> — Renames a file or directory.',
+    ECHO: 'ECHO <text> — Displays text to terminal.',
+    DATE: 'DATE — Displays current date.',
+    TIME: 'TIME — Displays current time.',
+    USER: 'USER — Shows current user.',
+    HISTORY: 'HISTORY — Shows last 10 commands.',
+    NOTE: 'NOTE <title> <text> — Creates a note file.',
+    SEARCH: 'SEARCH <keyword> — Searches filenames and file contents.',
+    SYSINFO: 'SYSINFO — Displays system info.',
+    WHOAMI: 'WHOAMI — Shows current username.',
+    ASCII: 'ASCII <text> — Prints block-letter ASCII of text.',
+    RUN: 'RUN <filename> — Executes JS code from a file.',
+    CERT: 'CERT — Displays build certificate info.',
+    '/?': '/? — Lists all available commands.',
+    HELP: 'HELP — Same as /?.',
+    MANUAL: 'MANUAL <command> — Displays help info for a command.',
+    LISTUSERS: 'LISTUSERS - List all users.'
+  };
+  break;
+
+case 'PRXMODE':
+  if (args[1]) {
+    currentPrxTarget = args[1];
+    const dir = getCurrentDirectory();
+
+    // Load existing content if the file exists
+    const content = dir[currentPrxTarget]?.type === 'prxfile'
+      ? dir[currentPrxTarget].content
+      : '';
+
+    document.getElementById('prxtext').value = content;
+
+    document.getElementById('prxmode').style.display = 'block';
+    document.getElementById('command-container').style.display = 'none';
+    commandInput.disabled = true;
+    document.getElementById('prxtext').focus();
+    inPrxMode = true; 
+  } else {
+    printToTerminal('Usage: PRXMODE <filename>');
+  }
+  break;
+
+case 'ENGINE':
+  if (args[1] && dir[args[1]] && dir[args[1]].type === 'prxfile') {
+    const code = dir[args[1]].content;
+    launchPrxGame(code, args[1]);
+  } else {
+    printToTerminal('Usage: ENGINE <prxfile>');
+  }
+  break;
+
+  case 'LISTUSERS':
+  const users = Object.keys(fileSystem.root.users);
+  printToTerminal(users.length ? 'Registered users: ' + users.join(', ') : 'No users found.');
+  break;
+
+  const query = args[1].toUpperCase();
+  printToTerminal(manuals[query] || `No manual entry for '${args[1]}'`);
+  break;
+    default:
+      printToTerminal('Unknown command. Use /? to list all available commands.');
+  }
+}
+
+function launchPrxGame(code, name) {
+  engineActive = true;
+  document.getElementById('prxgame').style.display = 'block';
+  document.getElementById('command-container').style.display = 'none';
+  commandInput.disabled = true;
+  
+  const screen = document.getElementById('prxscreen');
+  screen.innerText = ''; // clear previous content
+
+  // Super simple PRX demo — interpret "draw x,y text"
+ function prxDraw(x, y, str) {
+  if (y >= 0 && y < GRID_ROWS) {
+    for (let i = 0; i < str.length && (x + i) < GRID_COLS; i++) {
+      screenBuffer[y][x + i] = str[i];
+    }
+  }
+}
+}
+// ===== PRX ENGINE STATE =====
+let engineActive = false;
+let gameCode = '';
+let gameLoop = null;
+
+const GRID_ROWS = 20;
+const GRID_COLS = 40;
+let screenBuffer = Array.from({ length: GRID_ROWS }, () => Array(GRID_COLS).fill(' '));
+let keyState = {};
+let gameVars = {};
+
+// ====== DRAWING ======
+function prxDraw(x, y, str) {
+  if (y >= 0 && y < GRID_ROWS) {
+    for (let i = 0; i < str.length && (x + i) < GRID_COLS; i++) {
+      screenBuffer[y][x + i] = str[i];
+    }
+  }
+}
+
+function renderBuffer() {
+  const output = screenBuffer.map(row => row.join('')).join('\n');
+  document.getElementById('prxscreen').innerText = output;
+}
+
+// ====== ENGINE RUNTIME ======
+function launchPrxGame(code, name) {
+  engineActive = true;
+  gameCode = code;
+
+  document.getElementById('prxgame').style.display = 'block';
+  document.getElementById('command-container').style.display = 'none';
+  commandInput.disabled = true;
+
+  screenBuffer = Array.from({ length: GRID_ROWS }, () => Array(GRID_COLS).fill(' '));
+  gameVars = {};
+
+  gameLoop = setInterval(() => runPrxFrame(), 1000 / 30); // 30 FPS
+}
+
+function runPrxFrame() {
+  screenBuffer = Array.from({ length: GRID_ROWS }, () => Array(GRID_COLS).fill(' '));
+  const lines = gameCode.split('\n');
+
+  lines.forEach(line => {
+    // Command: draw x,y "text"
+    let drawMatch = line.match(/^draw\s+(\w+),(\w+)\s+"(.+)"$/i);
+    if (drawMatch) {
+      let [, x, y, text] = drawMatch;
+      x = isNaN(x) ? gameVars[x] || 0 : Number(x);
+      y = isNaN(y) ? gameVars[y] || 0 : Number(y);
+      prxDraw(x, y, text);
+    }
+
+// Command: setarray name width height
+const setarrayMatch = line.match(/^setarray\s+(\w+)\s+(\d+)\s+(\d+)$/i);
+if (setarrayMatch) {
+  const [, name, width, height] = setarrayMatch;
+  prxArrays[name] = Array.from({ length: Number(height) }, () =>
+    Array(Number(width)).fill('.')
+  );
+}
+
+// Command: arrayset name x y value
+const arraysetMatch = line.match(/^arrayset\s+(\w+)\s+(\w+)\s+(\w+)\s+(.+)$/i);
+if (arraysetMatch) {
+  const [, name, x, y, value] = arraysetMatch;
+  const a = prxArrays[name];
+  const xi = isNaN(x) ? gameVars[x] || 0 : Number(x);
+  const yi = isNaN(y) ? gameVars[y] || 0 : Number(y);
+  if (a && a[yi] && xi < a[yi].length) a[yi][xi] = value.charAt(0); // only 1 char
+}
+
+// Command: arraydraw name offsetX offsetY
+const drawArrayMatch = line.match(/^arraydraw\s+(\w+)\s+(\w+)\s+(\w+)$/i);
+if (drawArrayMatch) {
+  const [, name, ox, oy] = drawArrayMatch;
+  const a = prxArrays[name];
+  const offsetX = isNaN(ox) ? gameVars[ox] || 0 : Number(ox);
+  const offsetY = isNaN(oy) ? gameVars[oy] || 0 : Number(oy);
+  if (a) {
+    a.forEach((row, y) =>
+      row.forEach((char, x) => {
+        prxDraw(offsetX + x, offsetY + y, char);
+      })
+    );
+  }
+}
+const rotMatch = line.match(/^arrayrotate\s+(\w+)\s+(\w+)\s+(\w+)\s+(cw|ccw)$/i);
+if (rotMatch) {
+  const [, name, xStr, yStr, dir] = rotMatch;
+  const grid = prxArrays[name];
+  const x = isNaN(xStr) ? gameVars[xStr] || 0 : Number(xStr);
+  const y = isNaN(yStr) ? gameVars[yStr] || 0 : Number(yStr);
+
+  if (grid && grid[y] && grid[y + 1] && grid[y][x + 1] !== undefined && grid[y + 1][x] !== undefined) {
+    const a = grid[y][x];       // Top-left
+    const b = grid[y][x + 1];   // Top-right
+    const c = grid[y + 1][x];   // Bottom-left
+
+    if (dir === 'cw') {
+      grid[y][x] = c;
+      grid[y + 1][x] = b;
+      grid[y][x + 1] = a;
+    }
+    // Optionally add 'ccw' later
+  }
+}
+const rndMatch = line.match(/^rnd\s+(\w+)\s+(\d+)$/i);
+if (rndMatch) {
+  const [, name, max] = rndMatch;
+  gameVars[name] = Math.floor(Math.random() * Number(max));
+}
+    // Command: set var value
+    let setMatch = line.match(/^set\s+(\w+)\s+(-?\d+)$/i);
+    if (setMatch) {
+      const [, name, value] = setMatch;
+      gameVars[name] = Number(value);
+    }
+
+    // Command: if key X then set var +/−num
+    let keySetMatch = line.match(/^if\s+key\s+(\w+)\s+then\s+set\s+(\w+)\s+([+\-]?\d+)$/i);
+    if (keySetMatch) {
+      const [, key, varname, delta] = keySetMatch;
+      if (keyState[key.toLowerCase()]) {
+        const current = gameVars[varname] || 0;
+        gameVars[varname] = current + Number(delta);
+      }
+    }
+
+    // Command: if key X then draw x,y "text"
+    let inputMatch = line.match(/^if\s+key\s+(\w+)\s+then\s+draw\s+(\w+),(\w+)\s+"(.+)"$/i);
+    if (inputMatch) {
+      const [, key, x, y, text] = inputMatch;
+      if (keyState[key.toLowerCase()]) {
+        prxDraw(
+          isNaN(x) ? gameVars[x] || 0 : Number(x),
+          isNaN(y) ? gameVars[y] || 0 : Number(y),
+          text
+        );
+      }
+    }
+  });
+
+  renderBuffer();
+}
+
+// ====== KEYBOARD INPUT ======
+document.addEventListener('keydown', e => {
+  keyState[e.key.toLowerCase()] = true;
+
+  // Escape exits game mode
+  if (engineActive && e.key === 'Escape') {
+    clearInterval(gameLoop);
+    document.getElementById('prxgame').style.display = 'none';
+    document.getElementById('command-container').style.display = 'flex';
+    commandInput.disabled = false;
+    commandInput.focus();
+    engineActive = false;
+    printToTerminal('[Exited PRX game engine]');
+  }
+});
+document.addEventListener('keydown', e => {
+  keyState[e.key.toLowerCase()] = true;
+});
+
+document.addEventListener('keyup', e => {
+  keyState[e.key.toLowerCase()] = false;
+});
+
+document.addEventListener('keyup', e => {
+  keyState[e.key.toLowerCase()] = false;
+});
+
+document.addEventListener('keydown', e => {
+  if (inPrxMode && e.ctrlKey && e.key.toLowerCase() === 's') {
+    e.preventDefault(); // Prevents the browser's default save dialog
+    const code = document.getElementById('prxtext').value;
+    const dir = getCurrentDirectory();
+    dir[currentPrxTarget] = {
+      type: 'prxfile',
+      language: 'prx',
+      content: code
+    };
+    saveFileSystem();
+    document.getElementById('prxmode').style.display = 'none';
+    document.getElementById('command-container').style.display = 'flex';
+    commandInput.disabled = false;
+    commandInput.focus();
+    inPrxMode = false;
+    printToTerminal(`Saved '${currentPrxTarget}' [PRX] and exited PRX mode.`);
+    if (engineActive && e.key === 'Escape') {
+  document.getElementById('prxgame').style.display = 'none';
+  document.getElementById('command-container').style.display = 'flex';
+  commandInput.disabled = false;
+  commandInput.focus();
+  engineActive = false;
+  printToTerminal('[Exited PRX game engine]');
+}
+  }
+});
+
+// INIT
+fileSystem = loadFileSystem();
+aliasMap = loadAliases();
+printToTerminal('prismDOS PUBLIC Build 0002.1; Prism Technology, INC.>');
+printToTerminal('No user logged in. Use REGISTER or LOGIN.');
+
+commandInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    const command = commandInput.value.trim();
+    if (command) {
+      printToTerminal(' ' + command);
+      executeCommand(command);
+      commandInput.value = '';
+    }
+  }
+});
+</script>
+
+</body></html>
